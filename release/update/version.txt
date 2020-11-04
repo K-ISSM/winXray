@@ -1,0 +1,8 @@
+{
+    "description":"修正PAC代理 Chrome打开 Google 速度慢。",
+    "format":".lzma",
+    "main":"\\winXray.exe",
+    "updater":"\\winXray.exe",
+    "url":"https://raw.githubusercontent.com/vuvptch/winXray/master/release/update/",
+    "version":"1.2"
+}

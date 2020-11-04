@@ -1,0 +1,142 @@
+import fonts.fontAwesome;
+import win.ui;
+/*DSG{{*/
+var winform = win.form(text="aardio form";right=892;bottom=709;bgcolor=16777215)
+winform.add(
+btnUpdate={cls="plus";text="保 存";left=457;top=603;right=560;bottom=639;align="left";bgcolor=11580047;db=1;dl=1;font=LOGFONT(h=-13);iconStyle={align="left";font=LOGFONT(h=-13;name='FontAwesome');padding={left=22}};iconText='\uF0C7';notify=1;textPadding={left=40};z=5};
+checkLan={cls="plus";text="允许来自局域网的连接";left=338;top=514;right=545;bottom=545;align="left";bgcolor=16777215;db=1;dl=1;font=LOGFONT(h=-16);iconStyle={align="left";font=LOGFONT(h=-16;name='FontAwesome')};iconText='\uF0C8';notify=1;textPadding={left=19};z=1};
+chkEnableGitConfigGithub={cls="plus";text="设置 git 客户端启用 github.com 代理提速（支持https、ssh协议）";left=339;top=550;right=855;bottom=581;align="left";bgcolor=16777215;db=1;dl=1;font=LOGFONT(h=-16);iconStyle={align="left";font=LOGFONT(h=-16;name='FontAwesome')};iconText='\uF0C8';notify=1;textPadding={left=19};z=11};
+editHttpPort={cls="plus";left=340;top=308;right=420;bottom=332;align="left";bgcolor=16777215;border={bottom=1;color=-8355712};db=1;dl=1;editable="edit";font=LOGFONT(h=-16);textPadding={bottom=1};z=12};
+editLanPacUrl={cls="plus";left=342;top=460;right=761;bottom=484;align="left";bgcolor=16777215;border={bottom=1;color=-8355712};db=1;dl=1;editable="edit";font=LOGFONT(h=-16);textPadding={bottom=1};z=9};
+editPacPort={cls="plus";left=340;top=359;right=420;bottom=383;align="left";bgcolor=16777215;border={bottom=1;color=-8355712};db=1;dl=1;editable="edit";font=LOGFONT(h=-16);textPadding={bottom=1};z=2};
+editPacUrl={cls="plus";left=340;top=411;right=759;bottom=435;align="left";bgcolor=16777215;border={bottom=1;color=-8355712};db=1;dl=1;editable="edit";font=LOGFONT(h=-16);textPadding={bottom=1};z=7};
+editSocksPort={cls="plus";left=340;top=262;right=420;bottom=286;align="left";bgcolor=16777215;border={bottom=1;color=-8355712};db=1;dl=1;editable="edit";font=LOGFONT(h=-16);textPadding={bottom=1};z=3};
+static={cls="static";text="SOCKS 代理服务端口：";left=130;top=268;right=328;bottom=294;align="right";bgcolor=16777215;db=1;dl=1;font=LOGFONT(h=-16);transparent=1;z=4};
+static2={cls="static";text="PAC 端口：";left=198;top=364;right=328;bottom=390;align="right";bgcolor=16777215;db=1;dl=1;font=LOGFONT(h=-16);transparent=1;z=6};
+static3={cls="static";text="本机 PAC 地址：";left=171;top=416;right=329;bottom=442;align="right";bgcolor=16777215;db=1;dl=1;font=LOGFONT(h=-16);transparent=1;z=8};
+static4={cls="static";text="局域网 PAC 地址：";left=173;top=465;right=331;bottom=491;align="right";bgcolor=16777215;db=1;dl=1;font=LOGFONT(h=-16);transparent=1;z=10};
+static5={cls="static";text="HTTP/HTTPS 代理服务端口：";left=70;top=314;right=328;bottom=340;align="right";bgcolor=16777215;db=1;dl=1;font=LOGFONT(h=-16);transparent=1;z=13}
+)
+/*}}*/
+
+import style;
+winform.checkLan.skin(style.checkBox);  
+winform.chkEnableGitConfigGithub.skin(style.checkBox);  
+winform.btnUpdate.skin(style.primaryButton);
+winform.editSocksPort.skin(style.edit);
+winform.editPacPort.skin(style.edit);
+winform.editPacUrl.editBox.readonly = true;
+
+import xray.pacServer;
+import xray.core;
+var onConfigJsonUpdate = function(){
+	var inbounds = ..config.core.default[["inbounds"]];
+	winform.editSocksPort.text = xray.core.socksProxyPort || inbounds[[1]][["port"]] || 1081;
+	winform.editHttpPort.text = xray.core.httpProxyPort || inbounds[[2]][["port"]] || 1082;
+	winform.editPacPort.text = xray.pacServer.getPort() || config.proxy.pacPort || 1083;
+
+	winform.checkLan.checked = inbounds[["inbounds"]][["listen"]] !== "127.0.0.1"
+	winform.chkEnableGitConfigGithub.checked = config.proxy.enableGitConfigGithub;
+	winform.editPacUrl.text = xray.pacServer.getUrl();
+	if(winform.checkLan.checked){
+		winform.editLanPacUrl.text = xray.pacServer.getUrl(true);
+	}	
+	
+	winform.editLanPacUrl.disabled = !winform.checkLan.checked
+}
+onConfigJsonUpdate();
+
+subscribe("config.core.changed",function(){
+    onConfigJsonUpdate();
+})  
+
+subscribe("xrayCore.restarted",function(socksProxyPort,httpProxPort){
+    onConfigJsonUpdate();
+})  
+
+subscribe("pacServer.restarted",function(pacPort){
+    onConfigJsonUpdate();
+})  
+
+import xray.core;
+import xray.pacServer;
+import process.popen;
+import wsock.tcp.client;
+winform.btnUpdate.oncommand = function(id,event){
+	winform.btnUpdate.disabledText = {'\uF254';'\uF251';'\uF252';'\uF253';'\uF250'};
+	
+	var client = wsock.tcp.client();  
+	var oldPort = xray.core.socksProxyPort;
+	if( tonumber(winform.editSocksPort.text)
+		&& tonumber(winform.editSocksPort.text) != oldPort
+		&& client.connectTimeout("127.0.0.1",tonumber(winform.editSocksPort.text) ,0.5) ){
+		winform.editSocksPort.editBox.showErrorTip(,"端口已被占用");
+		winform.btnUpdate.disabledText = null;
+		return client.close(); 
+	} 
+	client.close();  
+	
+	var client = wsock.tcp.client();  
+	var oldPacPort = xray.pacServer.getPort();
+	if( tonumber(winform.editPacPort.text)
+		&& tonumber(winform.editPacPort.text) != oldPacPort
+		&& client.connectTimeout("127.0.0.1",tonumber(winform.editPacPort.text) ,0.5) ){
+		winform.editPacPort.editBox.showErrorTip(,"PAC端口已被占用");
+		winform.btnUpdate.disabledText = null;
+		return client.close(); 
+	} 
+	client.close(); 
+	
+ 
+	config.proxy.pacPort  = tonumber(winform.editPacPort.text)
+	if(oldPacPort!=tonumber(winform.editPacPort.text)){ 
+		xray.core.restartPac();
+	}
+	  
+	if(winform.chkEnableGitConfigGithub.checked!=config.proxy.enableGitConfigGithub){
+		config.proxy.enableGitConfigGithub = winform.chkEnableGitConfigGithub.checked;
+			
+		import xray.github;
+		if(!config.proxy.enableGitConfigGithub){
+			xray.github.setProxy(false);		
+		} 
+		else {
+			xray.github.setProxy(null);	
+		}
+	} 
+	
+	var restartCore = false;
+	var port = tonumber(winform.editSocksPort.text) 
+	config.core.default.inbounds[1]["port"]  = port;
+	if(port!=oldPort){ 
+		restartCore = true;
+	}	
+	
+	var port = tonumber(winform.editHttpPort.text) 
+	config.core.default.inbounds[2]["port"]  = port;
+	if(port!=oldPort){
+		restartCore = true;
+	}		
+
+	var listen = winform.checkLan.checked ? "0.0.0.0" : "127.0.0.1"; 
+	if(listen!=config.core.default.inbounds[1]["listen"]){
+		config.core.default.inbounds[1]["listen"]= listen;
+		restartCore = true;
+	}		 
+    
+    config.core.save();
+    publish("config.inbounds.changed");
+    if(restartCore) publish("uiCommand.restartXrayCore");    
+    
+    onConfigJsonUpdate();
+    winform.btnUpdate.disabledText = null;
+	winform.msgOk("配置已更新",1200);
+}
+
+winform.checkLan.oncommand = function(id,event){
+	winform.editLanPacUrl.disabled = !winform.checkLan.checked
+}
+
+winform.show();
+win.loopMessage();
+return winform;

@@ -1,0 +1,5 @@
+{
+updateUrl="https://raw.githubusercontent.com/vuvptch/winXray/master/release/update/";
+description="修正PAC代理 Chrome打开 Google 速度慢。";
+outputDir="/release/update/"
+}
